@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "cuffsx",
+  "version": "1.0",
+  "name": "cuffsx",
+  "description": "fabric mode with cuffs",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/cuffsx/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "org.gloyer057.cuffsx.client.CuffsxDataGenerator"
+    ],
+    "client": [
+      "org.gloyer057.cuffsx.client.CuffsxClient"
+    ],
+    "main": [
+      "org.gloyer057.cuffsx.Cuffsx"
+    ]
+  },
+  "mixins": [
+    "cuffsx.mixins.json",
+    {
+      "config": "cuffsx.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.1",
+    "fabric-api": "*",
+    "minecraft": "1.20.1"
+  }
+}
