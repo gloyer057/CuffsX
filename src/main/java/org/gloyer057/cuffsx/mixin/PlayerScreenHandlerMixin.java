@@ -1,7 +1,7 @@
 package org.gloyer057.cuffsx.mixin;
 
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.screen.PlayerScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.gloyer057.cuffsx.cuff.CuffManager;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PlayerScreenHandler.class)
+@Mixin(ScreenHandler.class)
 public abstract class PlayerScreenHandlerMixin {
 
     @Inject(method = "onSlotClick", at = @At("HEAD"), cancellable = true)

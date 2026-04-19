@@ -7,7 +7,7 @@ public class HandcuffsItem extends Item {
     private final CuffType cuffType;
 
     public HandcuffsItem(CuffType cuffType) {
-        super(new Item.Settings().maxCount(16));
+        super(new Item.Settings().maxCount(1));
         this.cuffType = cuffType;
     }
 

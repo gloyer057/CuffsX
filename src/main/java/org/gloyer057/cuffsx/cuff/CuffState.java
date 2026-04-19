@@ -43,6 +43,21 @@ public class CuffState extends PersistentState {
         return set.stream().anyMatch(r -> r.cuffType() == type);
     }
 
+    /**
+     * Обновляет lockedPos для записи с указанным типом.
+     * Используется при снятии поводка чтобы не телепортировать игрока обратно.
+     */
+    public void updateLockedPos(UUID targetUUID, CuffType type, net.minecraft.util.math.Vec3d newPos) {
+        Set<CuffRecord> set = records.get(targetUUID);
+        if (set == null) return;
+        CuffRecord old = set.stream().filter(r -> r.cuffType() == type).findFirst().orElse(null);
+        if (old == null) return;
+        set.remove(old);
+        set.add(new CuffRecord(old.targetUUID(), old.applierUUID(), old.cuffType(),
+                old.timestamp(), newPos, old.applierName(), old.targetName()));
+        markDirty();
+    }
+
     @Override
     public NbtCompound writeNbt(NbtCompound nbt) {
         NbtList list = new NbtList();

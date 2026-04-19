@@ -7,12 +7,8 @@
   "authors": [],
   "contact": {},
   "license": "All-Rights-Reserved",
-  "icon": "assets/cuffsx/icon.png",
   "environment": "*",
   "entrypoints": {
-    "fabric-datagen": [
-      "org.gloyer057.cuffsx.client.CuffsxDataGenerator"
-    ],
     "client": [
       "org.gloyer057.cuffsx.client.CuffsxClient"
     ],
@@ -28,7 +24,7 @@
     }
   ],
   "depends": {
-    "fabricloader": ">=0.19.1",
+    "fabricloader": ">=0.14.0",
     "fabric-api": "*",
     "minecraft": "1.20.1"
   }

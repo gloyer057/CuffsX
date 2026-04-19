@@ -1,20 +1,24 @@
 package org.gloyer057.cuffsx.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import me.lucko.fabric.api.permissions.v0.Permissions;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import org.gloyer057.cuffsx.cuff.CuffLog;
-import org.gloyer057.cuffsx.cuff.CuffManager;
-import org.gloyer057.cuffsx.cuff.CuffRecord;
-import org.gloyer057.cuffsx.cuff.CuffState;
+import org.gloyer057.cuffsx.cuff.*;
+import org.gloyer057.cuffsx.item.ModItems;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 
+import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class CuffsxCommand {
@@ -22,49 +26,33 @@ public class CuffsxCommand {
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
+    private static Predicate<ServerCommandSource> perm(String node) {
+        return Permissions.require(node, 4);
+    }
+
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(
             literal("cuffsx")
-                .then(literal("reload")
-                    .executes(ctx -> {
-                        ServerCommandSource source = ctx.getSource();
-                        if (!Permissions.check(source, "cuffsx.reload", 4)) {
-                            source.sendError(Text.literal("У вас нет прав для выполнения этой команды."));
-                            return 0;
-                        }
-                        CuffManager.setEnabled(true);
-                        source.sendFeedback(() -> Text.literal("Конфигурация cuffsx перезагружена."), false);
-                        return 1;
-                    }))
                 .then(literal("enable")
+                    .requires(perm("cuffsx.enable"))
                     .executes(ctx -> {
                         ServerCommandSource source = ctx.getSource();
-                        if (!Permissions.check(source, "cuffsx.enable", 4)) {
-                            source.sendError(Text.literal("У вас нет прав для выполнения этой команды."));
-                            return 0;
-                        }
                         CuffManager.setEnabled(true);
                         source.sendFeedback(() -> Text.literal("Наручники включены."), false);
                         return 1;
                     }))
                 .then(literal("disable")
+                    .requires(perm("cuffsx.disable"))
                     .executes(ctx -> {
                         ServerCommandSource source = ctx.getSource();
-                        if (!Permissions.check(source, "cuffsx.disable", 4)) {
-                            source.sendError(Text.literal("У вас нет прав для выполнения этой команды."));
-                            return 0;
-                        }
                         CuffManager.setEnabled(false);
                         source.sendFeedback(() -> Text.literal("Наручники отключены."), false);
                         return 1;
                     }))
                 .then(literal("list")
+                    .requires(perm("cuffsx.list"))
                     .executes(ctx -> {
                         ServerCommandSource source = ctx.getSource();
-                        if (!Permissions.check(source, "cuffsx.list", 4)) {
-                            source.sendError(Text.literal("У вас нет прав для выполнения этой команды."));
-                            return 0;
-                        }
                         CuffState state = CuffState.getOrCreate(source.getServer());
                         Collection<CuffRecord> all = state.getAllRecords();
                         if (all.isEmpty()) {
@@ -81,12 +69,9 @@ public class CuffsxCommand {
                         return 1;
                     }))
                 .then(literal("log")
+                    .requires(perm("cuffsx.log"))
                     .executes(ctx -> {
                         ServerCommandSource source = ctx.getSource();
-                        if (!Permissions.check(source, "cuffsx.log", 4)) {
-                            source.sendError(Text.literal("У вас нет прав для выполнения этой команды."));
-                            return 0;
-                        }
                         List<CuffLog.LogEntry> recent = CuffLog.getRecent();
                         if (recent.isEmpty()) {
                             source.sendFeedback(
@@ -103,6 +88,50 @@ public class CuffsxCommand {
                         }
                         return 1;
                     }))
+                .then(literal("remove")
+                    .requires(perm("cuffsx.remove"))
+                    .then(argument("player", StringArgumentType.word())
+                        .executes(ctx -> {
+                            ServerCommandSource source = ctx.getSource();
+                            String playerName = StringArgumentType.getString(ctx, "player");
+                            ServerPlayerEntity target = source.getServer()
+                                    .getPlayerManager().getPlayer(playerName);
+
+                            if (target == null) {
+                                source.sendError(Text.literal("§cИгрок " + playerName + " не найден или не в сети."));
+                                return 0;
+                            }
+
+                            CuffState state = CuffState.getOrCreate(source.getServer());
+                            Set<CuffRecord> records = state.getRecords(target.getUuid());
+
+                            if (records.isEmpty()) {
+                                source.sendError(Text.literal("§cУ игрока " + playerName + " нет наручников."));
+                                return 0;
+                            }
+
+                            // Снимаем все наручники принудительно (без возврата старых)
+                            for (CuffType type : CuffType.values()) {
+                                if (state.hasCuff(target.getUuid(), type)) {
+                                    CuffManager.removeCuffsForced(target, type);
+                                    // Выдаём новые наручники тому кто прописал команду
+                                    ItemStack newStack = new ItemStack(
+                                            type == CuffType.HANDS ? ModItems.HANDCUFFS_HANDS : ModItems.HANDCUFFS_LEGS);
+                                    try {
+                                        ServerPlayerEntity executor = source.getPlayer();
+                                        if (!executor.getInventory().insertStack(newStack)) {
+                                            executor.dropItem(newStack, false);
+                                        }
+                                    } catch (Exception ignored) {
+                                        // Команда из консоли — предмет просто исчезает
+                                    }
+                                }
+                            }
+
+                            source.sendFeedback(() -> Text.literal(
+                                    "§aНаручники сняты с " + playerName + "."), false);
+                            return 1;
+                        })))
         );
     }
 }
