@@ -1,5 +1,4 @@
 .gradle/
-build/
 logs/
 *.log
 out/
